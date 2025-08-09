@@ -1,0 +1,18 @@
+# env
+venv/
+.env
+
+# django
+__pycache__/
+
+# logs
+logs/
+
+# db
+*/*.sqlite3
+
+# media
+media/
+
+# static
+static/
