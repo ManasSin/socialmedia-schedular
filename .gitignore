@@ -16,3 +16,6 @@ media/
 
 # static
 static/
+
+# jupyter
+.ipynb_*
