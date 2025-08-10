@@ -19,3 +19,6 @@ static/
 
 # jupyter
 .ipynb_*
+
+# migrations
+migrations/
