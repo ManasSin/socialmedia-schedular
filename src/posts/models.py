@@ -25,7 +25,7 @@ class Post(models.Model):
             raise ValidationError(
                 {"content": "Content fields should be at least be 5 Char long"}
             )
-        elif self.share_on_linkedin and not self.can_share_on_linkedin:
+        if self.share_on_linkedin and not self.can_share_on_linkedin:
             raise ValidationError(
                 {"share_on_linkedin": "Content is already shared on linkedin"}
             )
@@ -33,6 +33,13 @@ class Post(models.Model):
     def save(self, *args, **kwargs):
         if self.share_on_linkedin and self.can_share_on_linkedin:
             print("sharing on linkedin right away")
+            # call the actual function to send the content to the linkedin
+            try:
+                linkedin.share_linkedin(self.user, self.content)
+            except Exception as e:
+                raise Exception(
+                    f"there was some error while making the post, read more :{e}") from e
+
             self.shared_at_linkedin = timezone.now()
         else:
             print("not sharing")
@@ -44,9 +51,13 @@ class Post(models.Model):
     def can_share_on_linkedin(self):
         try:
             linkedin.get_social_user(self.user, "linkedin")
-        except Exception as e:
-            raise ValidationError({"user": f"{e}"})
+        # except Exception as e:
+            # raise ValidationError({"user": f"{e}"}) from e
             # raise ValidationError({
             #   "user": "User has no validation to social providers"
             # })
+        except linkedin.NotConnectedToSocialException as not_connected:
+            # pylint: disable=not-callable
+            raise not_connected(
+                "You must be connect to a social provider to make a social post") from not_connected
         return not self.shared_at_linkedin
