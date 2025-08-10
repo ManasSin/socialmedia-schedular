@@ -27,6 +27,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+if DEBUG:
+    ALLOWED_HOSTS = [
+        "host.docker.internal",
+        # "http://127.0.0.1:8000",
+        "*",
+    ]
+
 
 # Application definition
 
