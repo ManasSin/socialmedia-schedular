@@ -21,43 +21,45 @@ class Post(models.Model):
 
     def clean(self, *args, **kwargs):
         super().clean(*args, **kwargs)
+        if self.share_on_linkedin:
+            self.validate_can_share_on_socials()
+
+    def save(self, *args, **kwargs):
+        if self.share_on_linkedin:
+            # pylint: disable=assignment-from-no-return disable=self-cls-assignment
+            self = self.perform_share_on_social(save=False)
+        else:
+            print("not sharing")
+        self.share_on_linkedin = False
+        super().save(*args, **kwargs)
+
+    def validate_can_share_on_socials(self):
         if len(self.content) < 5:
             raise ValidationError(
                 {"content": "Content fields should be at least be 5 Char long"}
             )
-        if self.share_on_linkedin and not self.can_share_on_linkedin:
+        if self.shared_at_linkedin:
             raise ValidationError(
                 {"share_on_linkedin": "Content is already shared on linkedin"}
             )
-
-    def save(self, *args, **kwargs):
-        if self.share_on_linkedin and self.can_share_on_linkedin:
-            print("sharing on linkedin right away")
-            # call the actual function to send the content to the linkedin
-            try:
-                linkedin.share_linkedin(self.user, self.content)
-            except Exception as e:
-                raise Exception(
-                    f"there was some error while making the post, read more :{e}") from e
-
-            self.shared_at_linkedin = timezone.now()
-        else:
-            print("not sharing")
-            # raise Exception("already made a post")
-        self.share_on_linkedin = False
-        super().save(*args, **kwargs)
-
-    @property
-    def can_share_on_linkedin(self):
         try:
             linkedin.get_social_user(self.user, "linkedin")
-        # except Exception as e:
-            # raise ValidationError({"user": f"{e}"}) from e
-            # raise ValidationError({
-            #   "user": "User has no validation to social providers"
-            # })
-        except linkedin.NotConnectedToSocialException as not_connected:
-            # pylint: disable=not-callable
-            raise not_connected(
-                "You must be connect to a social provider to make a social post") from not_connected
-        return not self.shared_at_linkedin
+        except linkedin.NotConnectedToSocialException as not_connect:
+            raise ValidationError({
+                "user": "You must be connect to a social provider to make a social post"
+            }) from not_connect
+        except Exception as e:
+            raise ValidationError({"user": f"{e}"}) from e
+
+    def perform_share_on_social(self, save=False):
+        self.share_on_linkedin = False
+        # call the actual function to send the content to the linkedin
+        try:
+            linkedin.share_linkedin(self.user, self.content)
+        except Exception as e:
+            # pylint: disable=broad-exception-raised
+            raise Exception(
+                f"there was some error while making the post, read more :{e}") from e
+        self.shared_at_linkedin = timezone.now()
+        if save:
+            self.save()
