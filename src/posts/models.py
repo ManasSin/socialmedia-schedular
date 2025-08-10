@@ -26,11 +26,7 @@ class Post(models.Model):
 
     def save(self, *args, **kwargs):
         if self.share_on_linkedin:
-            # pylint: disable=assignment-from-no-return disable=self-cls-assignment
-            self = self.perform_share_on_social(save=False)
-        else:
-            print("not sharing")
-        self.share_on_linkedin = False
+            self.perform_share_on_social(save=False)
         super().save(*args, **kwargs)
 
     def validate_can_share_on_socials(self):
@@ -45,9 +41,11 @@ class Post(models.Model):
         try:
             linkedin.get_social_user(self.user, "linkedin")
         except linkedin.NotConnectedToSocialException as not_connect:
-            raise ValidationError({
-                "user": "You must be connect to a social provider to make a social post"
-            }) from not_connect
+            raise ValidationError(
+                {
+                    "user": "You must be connect to a social provider to make a social post"
+                }
+            ) from not_connect
         except Exception as e:
             raise ValidationError({"user": f"{e}"}) from e
 
@@ -59,7 +57,8 @@ class Post(models.Model):
         except Exception as e:
             # pylint: disable=broad-exception-raised
             raise Exception(
-                f"there was some error while making the post, read more :{e}") from e
+                f"there was some error while making the post, read more :{e}"
+            ) from e
         self.shared_at_linkedin = timezone.now()
         if save:
             self.save()

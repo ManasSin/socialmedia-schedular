@@ -11,8 +11,7 @@ def get_social_user(user, provider="linkedin"):
     try:
         linkedin_user = user.socialaccount_set.get(provider=provider)
     except Exception as e:
-        raise NotConnectedToSocialException(
-            "User has not linked any provider") from e
+        raise NotConnectedToSocialException("User has not linked any provider") from e
 
     return linkedin_user
 
@@ -69,5 +68,6 @@ def share_linkedin(user, text: str):
         response.raise_for_status()
     except Exception as e:
         raise Exception(
-            f"There was an error which i can't should coz of skill issues: {e}") from e
+            f"There was an error which i can't should coz of skill issues: {e}"
+        ) from e
     return response
