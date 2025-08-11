@@ -20,7 +20,10 @@ class Post(models.Model):
     share_at = models.DateTimeField(
         auto_now=False, auto_now_add=False, null=True, blank=True
     )
-    shared_completed_at = models.DateTimeField(
+    share_start_at = models.DateTimeField(
+        auto_now=False, auto_now_add=False, null=True, blank=True
+    )
+    share_completed_at = models.DateTimeField(
         auto_now=False, auto_now_add=False, null=True, blank=True
     )
     share_on_linkedin = models.BooleanField(default=False)
@@ -35,7 +38,7 @@ class Post(models.Model):
         if all(
             [
                 self.share_now is None and self.share_at is None,
-                self.shared_completed_at is None,
+                self.share_completed_at is None,
             ]
         ):
             raise ValidationError(
@@ -55,17 +58,21 @@ class Post(models.Model):
 
     def save(self, *args, **kwargs):
         trigger_send = False
-        if self.share_on_linkedin:
-            # self.perform_share_on_social(save=False)
-            print("object_id", self.id)
+        if all(
+            [
+                self.share_now is None and self.share_at is None,
+                self.share_completed_at is None and self.share_start_at is None,
+            ]
+        ):
             trigger_send = True
+
+        if self.share_now:
+            self.share_at = timezone.now()
         super().save(*args, **kwargs)
 
         if trigger_send:
             time_delay = (timezone.now() + timedelta(seconds=10)).timestamp() * 1000
-            if self.share_now:
-                time_delay = (timezone.now() + timedelta(seconds=22)).timestamp() * 1000
-            elif self.share_at:
+            if self.share_at:
                 time_delay = (self.share_at + timedelta(seconds=22)).timestamp() * 1000
 
             trigger_inngest_events(
