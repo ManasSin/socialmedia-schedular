@@ -2,6 +2,8 @@ from django.utils import timezone
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from datetime import timedelta
+
 from helpers import linkedin
 
 from schedular.healper import trigger_inngest_events
@@ -20,9 +22,6 @@ class Post(models.Model):
     )
     shared_completed_at = models.DateTimeField(
         auto_now=False, auto_now_add=False, null=True, blank=True
-    )
-    share_complete_uid = models.UUIDField(
-        unique=True, default=None, auto_created=False, blank=True
     )
     share_on_linkedin = models.BooleanField(default=False)
     shared_at_linkedin = models.DateTimeField(
@@ -48,7 +47,7 @@ class Post(models.Model):
         if self.share_on_linkedin:
             self.validate_can_share_on_socials()
 
-    def schedule_platform(self):
+    def scheduled_platform(self):
         platform = []
         if self.share_on_linkedin:
             platform.append("linkedin")
@@ -59,15 +58,21 @@ class Post(models.Model):
         if self.share_on_linkedin:
             # self.perform_share_on_social(save=False)
             print("object_id", self.id)
-            self.share_on_linkedin = False
             trigger_send = True
         super().save(*args, **kwargs)
 
         if trigger_send:
+            time_delay = (timezone.now() + timedelta(seconds=10)).timestamp() * 1000
+            if self.share_now:
+                time_delay = (timezone.now() + timedelta(seconds=22)).timestamp() * 1000
+            elif self.share_at:
+                time_delay = (self.share_at + timedelta(seconds=22)).timestamp() * 1000
+
             trigger_inngest_events(
                 "post/post.scheduled",
                 {"object_id": self.id},
                 id=f"post/post.scheduled/{self.id}",
+                ts=int(time_delay),
             )
 
     def validate_can_share_on_socials(self):
@@ -108,3 +113,4 @@ class Post(models.Model):
         self.shared_at_linkedin = timezone.now()
         if save:
             self.save()
+        return self

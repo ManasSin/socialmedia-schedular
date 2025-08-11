@@ -55,7 +55,6 @@ class PostAdmin(admin.ModelAdmin):
     ) -> None:
         # print(form)
         if not change:
-            form.user = request.user
             if not obj.user:
                 obj.user = request.user
         super().save_model(request, obj, form, change)
