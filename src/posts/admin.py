@@ -31,12 +31,12 @@ class PostAdmin(admin.ModelAdmin):
     def get_readonly_fields(
         self, request: HttpRequest, obj: Any | None = ...
     ) -> list[str]:
-        print(obj)
+        # print(obj)
         if obj and obj.shared_at_linkedin:
             return ["user", "content", "shared_at_linkedin", "share_on_linkedin"]
         if request.user.is_superuser:
             return ["shared_at_linkedin"]
-        return ["user", "shared_at_linkedin"]
+        return ["user", "shared_at_linkedin", "share_now", "share_at"]
 
     def has_delete_permission(
         self,
@@ -53,7 +53,7 @@ class PostAdmin(admin.ModelAdmin):
     def save_model(
         self, request: HttpRequest, obj: Any, form: Any, change: Any
     ) -> None:
-        print(form)
+        # print(form)
         if not change:
             form.user = request.user
             if not obj.user:

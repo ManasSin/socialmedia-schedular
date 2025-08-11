@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from helpers import linkedin
 
+from schedular.healper import trigger_inngest_events
+
 User = settings.AUTH_USER_MODEL
 
 # Create your models here.
@@ -12,6 +14,16 @@ User = settings.AUTH_USER_MODEL
 class Post(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
+    share_now = models.BooleanField(default=None, null=True, blank=True)
+    share_at = models.DateTimeField(
+        auto_now=False, auto_now_add=False, null=True, blank=True
+    )
+    shared_completed_at = models.DateTimeField(
+        auto_now=False, auto_now_add=False, null=True, blank=True
+    )
+    share_complete_uid = models.UUIDField(
+        unique=True, default=None, auto_created=False, blank=True
+    )
     share_on_linkedin = models.BooleanField(default=False)
     shared_at_linkedin = models.DateTimeField(
         auto_now=False, auto_now_add=False, null=True, blank=True
@@ -21,13 +33,42 @@ class Post(models.Model):
 
     def clean(self, *args, **kwargs):
         super().clean(*args, **kwargs)
+        if all(
+            [
+                self.share_now is None and self.share_at is None,
+                self.shared_completed_at is None,
+            ]
+        ):
+            raise ValidationError(
+                {
+                    "share_at": "You select a time to schedule the post or must share it now ",
+                    "share_now": "You select a time to schedule the post or must share it now ",
+                }
+            )
         if self.share_on_linkedin:
             self.validate_can_share_on_socials()
 
-    def save(self, *args, **kwargs):
+    def schedule_platform(self):
+        platform = []
         if self.share_on_linkedin:
-            self.perform_share_on_social(save=False)
+            platform.append("linkedin")
+        return platform
+
+    def save(self, *args, **kwargs):
+        trigger_send = False
+        if self.share_on_linkedin:
+            # self.perform_share_on_social(save=False)
+            print("object_id", self.id)
+            self.share_on_linkedin = False
+            trigger_send = True
         super().save(*args, **kwargs)
+
+        if trigger_send:
+            trigger_inngest_events(
+                "post/post.scheduled",
+                {"object_id": self.id},
+                id=f"post/post.scheduled/{self.id}",
+            )
 
     def validate_can_share_on_socials(self):
         if len(self.content) < 5:
@@ -49,16 +90,21 @@ class Post(models.Model):
         except Exception as e:
             raise ValidationError({"user": f"{e}"}) from e
 
-    def perform_share_on_social(self, save=False):
+    def perform_share_on_social(self, mock=False, save=False):
         self.share_on_linkedin = False
+
+        if self.shared_at_linkedin:
+            return self
         # call the actual function to send the content to the linkedin
-        try:
-            linkedin.share_linkedin(self.user, self.content)
-        except Exception as e:
-            # pylint: disable=broad-exception-raised
-            raise Exception(
-                f"there was some error while making the post, read more :{e}"
-            ) from e
+        if not mock:
+            try:
+                linkedin.share_linkedin(self.user, self.content)
+
+            except Exception as e:
+                # pylint: disable=broad-exception-raised
+                raise Exception(
+                    f"there was some error while making the post, read more :{e}"
+                ) from e
         self.shared_at_linkedin = timezone.now()
         if save:
             self.save()
