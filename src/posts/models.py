@@ -60,7 +60,7 @@ class Post(models.Model):
         trigger_send = False
         if all(
             [
-                self.share_now is None and self.share_at is None,
+                self.share_now is not None or self.share_at is not None,
                 self.share_completed_at is None and self.share_start_at is None,
             ]
         ):
@@ -71,9 +71,9 @@ class Post(models.Model):
         super().save(*args, **kwargs)
 
         if trigger_send:
-            time_delay = (timezone.now() + timedelta(seconds=10)).timestamp() * 1000
+            time_delay = (timezone.now() + timedelta(seconds=3)).timestamp() * 1000
             if self.share_at:
-                time_delay = (self.share_at + timedelta(seconds=22)).timestamp() * 1000
+                time_delay = (self.share_at + timedelta(seconds=5)).timestamp() * 1000
 
             trigger_inngest_events(
                 "post/post.scheduled",

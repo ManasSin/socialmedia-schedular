@@ -33,9 +33,16 @@ class PostAdmin(admin.ModelAdmin):
     ) -> list[str]:
         # print(obj)
         if obj and obj.shared_at_linkedin:
-            return ["user", "content", "shared_at_linkedin", "share_on_linkedin"]
+            return [
+                "user",
+                "content",
+                "shared_at_linkedin",
+                "share_on_linkedin",
+                "share_start_at",
+                "share_completed_at",
+            ]
         if request.user.is_superuser:
-            return ["shared_at_linkedin"]
+            return ["shared_at_linkedin", "share_start_at", "share_completed_at"]
         return ["user", "shared_at_linkedin", "share_now", "share_at"]
 
     def has_delete_permission(
