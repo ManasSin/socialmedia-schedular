@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+import os
 import requests
 
 
@@ -19,7 +20,7 @@ def get_social_user(user, provider="linkedin"):
 def get_share_headers(linkedin_user):
     token = linkedin_user.socialtoken_set.all()
     if not token.exists():
-        raise Exception("could not get the user token")
+        raise ValueError("could not get the user token")
 
     social_token = token.first()
     return {
@@ -31,8 +32,8 @@ def get_share_headers(linkedin_user):
 def get_user_id(linkedin_user):
     try:
         user_id = linkedin_user.uid
-    except:
-        raise Exception("Linkedin user id not found")
+    except Exception as e:
+        raise ValueError("Linkedin user id not found") from e
 
     return user_id
 
@@ -41,33 +42,29 @@ def share_linkedin(user, text: str):
     User = get_user_model()
 
     if not isinstance(user, User):
-        raise Exception("User is not a type of user")
+        raise ValueError("User is not a type of user")
 
     linkedin_user = get_social_user(user, "linkedin")
 
     header = get_share_headers(linkedin_user)
     user_id = get_user_id(linkedin_user)
-    endpoint = "https://api.linkedin.com/v2/ugcPosts"
+    endpoint = os.getenv("LINKEDIN_API_ENDPOINT")
 
     payload = {
         "author": f"urn:li:person:{user_id}",
         "lifecycleState": "PUBLISHED",
         "specificContent": {
             "com.linkedin.ugc.ShareContent": {
-                "shareCommentary": {
-                    "text": "Hello World! This is my first Share on LinkedIn!"
-                },
+                "shareCommentary": {"text": text},
                 "shareMediaCategory": "NONE",
             }
         },
         "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
     }
 
-    response = requests.post(endpoint, headers=header, json=payload)
+    response = requests.post(endpoint, headers=header, json=payload, timeout=15)
     try:
         response.raise_for_status()
-    except Exception as e:
-        raise Exception(
-            f"There was an error which i can't should coz of skill issues: {e}"
-        ) from e
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"There was an error while sharing on linkedin: {e}") from e
     return response

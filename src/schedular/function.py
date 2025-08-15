@@ -3,20 +3,21 @@ from django.utils import timezone
 from .client import inngest_client
 from posts.models import Post
 from datetime import timedelta, datetime
+import requests
 
 
 def get_now():
-    return timezone.now().timestamp()
+    return timezone.now().astimezone().timestamp()
 
 
 def workflow_share_on_linkedin_node(instance):
     try:
         instance.validate_can_share_on_socials()
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         print(f"error {e}")
         return (
             False,
-            "Problem saving instance, stopping sharing",
+            f"Problem saving instance, stopping sharing: {e}",
         )
 
     instance = instance.perform_share_on_social(mock=True, save=False)

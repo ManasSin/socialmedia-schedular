@@ -10,7 +10,13 @@ from schedular.healper import trigger_inngest_events
 
 User = settings.AUTH_USER_MODEL
 
+
 # Create your models here.
+class SocialPlatform(models.TextChoices):
+    LINKEDIN = "linkedin"
+    TWITTER = "twitter"
+    FACEBOOK = "facebook"
+    INSTAGRAM = "instagram"
 
 
 class Post(models.Model):
@@ -26,10 +32,8 @@ class Post(models.Model):
     share_completed_at = models.DateTimeField(
         auto_now=False, auto_now_add=False, null=True, blank=True
     )
-    share_on_linkedin = models.BooleanField(default=False)
-    shared_at_linkedin = models.DateTimeField(
-        auto_now=False, auto_now_add=False, null=True, blank=True
-    )
+    share_on_socials = models.JSONField(default=list, choices=SocialPlatform.choices)
+    shared_at_socials = models.JSONField(default=list, choices=SocialPlatform.choices)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -47,13 +51,13 @@ class Post(models.Model):
                     "share_now": "You select a time to schedule the post or must share it now ",
                 }
             )
-        if self.share_on_linkedin:
+        if self.share_on_socials:
             self.validate_can_share_on_socials()
 
     def scheduled_platform(self):
         platform = []
-        if self.share_on_linkedin:
-            platform.append("linkedin")
+        if self.share_on_socials:
+            platform.append(self.share_on_socials)
         return platform
 
     def save(self, *args, **kwargs):
@@ -87,9 +91,9 @@ class Post(models.Model):
             raise ValidationError(
                 {"content": "Content fields should be at least be 5 Char long"}
             )
-        if self.shared_at_linkedin:
+        if self.shared_at_socials:
             raise ValidationError(
-                {"share_on_linkedin": "Content is already shared on linkedin"}
+                {"share_on_socials": "Content is already shared on social platforms"}
             )
         try:
             linkedin.get_social_user(self.user, "linkedin")
@@ -103,9 +107,9 @@ class Post(models.Model):
             raise ValidationError({"user": f"{e}"}) from e
 
     def perform_share_on_social(self, mock=False, save=False):
-        self.share_on_linkedin = False
+        self.share_on_socials = []
 
-        if self.shared_at_linkedin:
+        if self.shared_at_socials:
             return self
         # call the actual function to send the content to the linkedin
         if not mock:
@@ -117,7 +121,7 @@ class Post(models.Model):
                 raise Exception(
                     f"there was some error while making the post, read more :{e}"
                 ) from e
-        self.shared_at_linkedin = timezone.now()
         if save:
             self.save()
+            self.shared_at_socials = timezone.now()
         return self

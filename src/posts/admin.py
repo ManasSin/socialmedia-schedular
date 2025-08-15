@@ -32,18 +32,18 @@ class PostAdmin(admin.ModelAdmin):
         self, request: HttpRequest, obj: Any | None = ...
     ) -> list[str]:
         # print(obj)
-        if obj and obj.shared_at_linkedin:
+        if obj and obj.shared_at_socials:
             return [
                 "user",
                 "content",
-                "shared_at_linkedin",
-                "share_on_linkedin",
+                "shared_at_socials",
+                "share_on_socials",
                 "share_start_at",
                 "share_completed_at",
             ]
         if request.user.is_superuser:
-            return ["shared_at_linkedin", "share_start_at", "share_completed_at"]
-        return ["user", "shared_at_linkedin", "share_now", "share_at"]
+            return ["shared_at_socials", "share_start_at", "share_completed_at"]
+        return ["user", "shared_at_socials", "share_now", "share_at"]
 
     def has_delete_permission(
         self,
@@ -54,7 +54,7 @@ class PostAdmin(admin.ModelAdmin):
             return True
         if obj is None:
             return False
-        return obj.user == request.user and not obj.shared_at_linkedin
+        return obj.user == request.user and not obj.shared_at_socials
         # return False
 
     def save_model(
