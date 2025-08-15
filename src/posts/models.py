@@ -1,18 +1,22 @@
+"""This file contains all the models needs in post service."""
+
+from datetime import timedelta
 from django.utils import timezone
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from datetime import timedelta
+from schedular.helper import trigger_inngest_events
 
 from helpers import linkedin
 
-from schedular.healper import trigger_inngest_events
 
 User = settings.AUTH_USER_MODEL
 
 
 # Create your models here.
 class SocialPlatform(models.TextChoices):
+    """A Class, providing enums for available social platforms on this apps"""
+
     LINKEDIN = "linkedin"
     TWITTER = "twitter"
     FACEBOOK = "facebook"
@@ -20,6 +24,8 @@ class SocialPlatform(models.TextChoices):
 
 
 class Post(models.Model):
+    """Post model for storing posts of user"""
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     share_now = models.BooleanField(default=None, null=True, blank=True)
@@ -87,6 +93,7 @@ class Post(models.Model):
             )
 
     def validate_can_share_on_socials(self):
+        """A small util function for clean method, validates the fields sent as payload."""
         if len(self.content) < 5:
             raise ValidationError(
                 {"content": "Content fields should be at least be 5 Char long"}
@@ -107,6 +114,7 @@ class Post(models.Model):
             raise ValidationError({"user": f"{e}"}) from e
 
     def perform_share_on_social(self, mock=False, save=False):
+        """A function that perform last level checks before performing the share action."""
         self.share_on_socials = []
 
         if self.shared_at_socials:

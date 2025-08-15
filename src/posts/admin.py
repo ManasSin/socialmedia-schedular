@@ -1,3 +1,5 @@
+"""This file contains all the admin related code for post service"""
+
 from typing import Any
 from django.contrib import admin
 from django.http import HttpRequest
@@ -8,17 +10,21 @@ from .models import Post
 
 
 class PostAdmin(admin.ModelAdmin):
+    """Admin class for the Post model"""
+
     list_filter = ["updated_at"]
     list_display = ["user", "content", "updated_at"]
     # pass
 
     def get_list_display(self, request: HttpRequest):
+        """Get the list display for the Post model"""
         if request.user.is_superuser:
             return ["content", "user", "updated_at"]
         # return super().get_list_display(request)
         return ["content", "updated_at"]
 
     def get_queryset(self, request: HttpRequest):
+        """Get the queryset for the Post model"""
         # if request.user.is_superuser:
         #     return super().get_queryset(request)
         # return super().get_queryset(request).filter(user=request.user)
@@ -31,6 +37,7 @@ class PostAdmin(admin.ModelAdmin):
     def get_readonly_fields(
         self, request: HttpRequest, obj: Any | None = ...
     ) -> list[str]:
+        """Get the readonly fields for the Post model"""
         # print(obj)
         if obj and obj.shared_at_socials:
             return [
@@ -50,6 +57,7 @@ class PostAdmin(admin.ModelAdmin):
         request: HttpRequest,
         obj: Any | None = None,
     ) -> bool:
+        """Check if the user has delete permission"""
         if request.user.is_superuser:
             return True
         if obj is None:
@@ -60,6 +68,7 @@ class PostAdmin(admin.ModelAdmin):
     def save_model(
         self, request: HttpRequest, obj: Any, form: Any, change: Any
     ) -> None:
+        """Save the Post model"""
         # print(form)
         if not change:
             if not obj.user:

@@ -1,16 +1,22 @@
-import inngest
-from django.utils import timezone
-from .client import inngest_client
-from posts.models import Post
+""" This file contains the functions for the schedular."""
+
 from datetime import timedelta, datetime
+from django.utils import timezone
+from django.db import models
+import inngest
 import requests
+
+from posts.models import Post
+from .client import inngest_client
 
 
 def get_now():
+    """Get the current time in the timezone of the user."""
     return timezone.now().astimezone().timestamp()
 
 
-def workflow_share_on_linkedin_node(instance):
+def workflow_share_on_linkedin_node(instance: models.Model) -> tuple[bool, str]:
+    """Share the post on Linkedin."""
     try:
         instance.validate_can_share_on_socials()
     except requests.exceptions.RequestException as e:
@@ -29,7 +35,8 @@ def workflow_share_on_linkedin_node(instance):
     # Event that triggers this function
     trigger=inngest.TriggerEvent(event="post/post.scheduled"),
 )
-def post_schedular(ctx: inngest.Context) -> str | Exception:
+def post_schedular(ctx: inngest.Context) -> tuple[str, str | Exception]:
+    """Schedule the post on Linkedin."""
     try:
         ctx.logger.info(ctx.event.data)
 
@@ -38,7 +45,7 @@ def post_schedular(ctx: inngest.Context) -> str | Exception:
         # pylint: disable=no-member
         qs = Post.objects.filter(id=object_id)
         if not qs.exists():
-            return "missing"
+            return "missing", f"Post not found for object_id: {object_id}"
         instance = qs.first()
 
         start_at = ctx.step.run("workflow_start", get_now)
@@ -67,10 +74,9 @@ def post_schedular(ctx: inngest.Context) -> str | Exception:
         end_at = ctx.step.run("workflow_start", get_now)
         end_at = datetime.fromtimestamp(end_at)
         qs.update(share_completed_at=timezone.now())
-        # instance.share_completed_at = timezone.now()
-        # instance.save()
 
         return "done"
+    # pylint: disable=broad-exception-caught
     except Exception as error:
         print(f"something went wrong {error}")
-        return "something went wrong"
+        return "something went wrong", error

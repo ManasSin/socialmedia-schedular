@@ -1,14 +1,16 @@
-from django.contrib.auth import get_user_model
+"""This file contains the functions for the linkedin api."""
+
 import os
 import requests
+from django.contrib.auth import get_user_model
 
 
 class NotConnectedToSocialException(Exception):
-    pass
+    """Exception raised when a user is not connected to a social provider"""
 
 
-# TODO: add caching for this function per user, so that database lookups are low in numbers
 def get_social_user(user, provider="linkedin"):
+    """Function used to get user's selected social provider"""
     try:
         linkedin_user = user.socialaccount_set.get(provider=provider)
     except Exception as e:
@@ -18,6 +20,7 @@ def get_social_user(user, provider="linkedin"):
 
 
 def get_share_headers(linkedin_user):
+    """Function returning specific headers for the linkedin api"""
     token = linkedin_user.socialtoken_set.all()
     if not token.exists():
         raise ValueError("could not get the user token")
@@ -30,6 +33,7 @@ def get_share_headers(linkedin_user):
 
 
 def get_user_id(linkedin_user):
+    """Function returning the user id for the linkedin api"""
     try:
         user_id = linkedin_user.uid
     except Exception as e:
@@ -39,9 +43,10 @@ def get_user_id(linkedin_user):
 
 
 def share_linkedin(user, text: str):
-    User = get_user_model()
+    """Function sharing the post on linkedin"""
+    active_user = get_user_model()
 
-    if not isinstance(user, User):
+    if not isinstance(user, active_user):
         raise ValueError("User is not a type of user")
 
     linkedin_user = get_social_user(user, "linkedin")
